@@ -16,6 +16,7 @@ u_char *sub_str(const u_char *input, int i_begin, int i_end);
 int ethernet(const u_char *temp);
 int ipv4(const u_char *temp);
 int tcp_pcap(const u_char *temp);
+int payload_len(const u_char *ip);
 void usage();
 
 int main(int argc, char* argv[]) {
@@ -50,16 +51,19 @@ int main(int argc, char* argv[]) {
         if(ethernet(packet) == 1)
         {
             packet = packet +14;
+            int tcp_paylen = payload_len(packet);
+            
             next = ipv4(packet);
             if (next != 0){
                 printf("%d\n",next);
                 packet=packet+next;
-                int payloadlen = tcp_pcap(packet);
-                printf("packet length : %d byte \n",payloadlen );
+                
+                int headerlen = tcp_pcap(packet);
+                printf("packet length : %d byte \n",tcp_paylen );
                 printf("packet content\t");
-                int min = (payloadlen>20)? 20: payloadlen;
+                int min = (tcp_payload>16)? 16: tcp_paylen;
                 for(int i = 0; i<min; i++) {
-                    printf("%02x",(packet+payloadlen)[i]);
+                    printf("%02x",(packet+headerlen)[i]);
                     if(i<min -1) printf(":");
                     else printf("\n");
                 }
@@ -121,6 +125,11 @@ int ipv4(const u_char *temp)
     }
     else
         return 0;
+}
+int payload_len(const u_char *ip)
+{
+    struct libnet_ipv4_hdr *ip_packet = (struct libnet_ipv4_hdr*)ip;
+    return (ip_packet ->ip_len - (ip_packet -> ip_hl << 2));
 }
 
 int tcp_pcap(const u_char *temp)
